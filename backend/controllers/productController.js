@@ -1,8 +1,25 @@
 import prisma from "../utils/prisma.js";
 
+/**
+ * GET /api/products
+ * Optional filter: ?category=electronics
+ */
 export const getAllProducts = async (req, res, next) => {
   try {
-    const products = await prisma.product.findMany();
+    const { category } = req.query;
+
+    const products = await prisma.product.findMany({
+      where: category
+        ? {
+            category: {
+              name: category,
+            },
+          }
+        : {},
+      include: {
+        category: true,
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -13,13 +30,16 @@ export const getAllProducts = async (req, res, next) => {
   }
 };
 
-
+/**
+ * GET /api/products/:id
+ */
 export const getProductById = async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = Number(req.params.id);
 
     const product = await prisma.product.findUnique({
       where: { id },
+      include: { category: true },
     });
 
     if (!product) {
@@ -38,14 +58,18 @@ export const getProductById = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/products
+ * (Admin later — for now open)
+ */
 export const createProduct = async (req, res, next) => {
   try {
-    const { name, description, price, stock, image } = req.body;
+    const { name, description, price, stock, image, categoryId } = req.body;
 
-    if (!name || !price || stock === undefined) {
+    if (!name || price === undefined || stock === undefined || !categoryId) {
       return res.status(400).json({
         success: false,
-        message: "name, price and stock are required",
+        message: "name, price, stock and categoryId are required",
       });
     }
 
@@ -56,6 +80,7 @@ export const createProduct = async (req, res, next) => {
         price,
         stock,
         image,
+        categoryId,
       },
     });
 
